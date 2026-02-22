@@ -1,0 +1,20 @@
+[
+  {
+    "id": "cs",
+    "name": "内测主题",
+    "author": "Gemini",
+    "description": "内测中......",
+    "version": "1.0",
+    "preview": "https://rrc.thinks365.com/themes/cs.jpg",
+    "cssUrl": "https://rrc.thinks365.com/themes/cs.css"
+  },
+    {
+    "id": "cloudmirror",
+    "name": "云镜(内测)",
+    "author": "thinks365",
+    "description": "云镜主题（内测版）",
+    "version": "1.0",
+    "preview": "https://rrc.thinks365.com/themes/yj.jpg",
+    "cssUrl": "https://rrc.thinks365.com/themes/yj.css"
+  }
+]
