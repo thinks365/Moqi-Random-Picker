@@ -1,5 +1,7 @@
 # 墨启随机点名
 
+
+
 <p align="center">
   <img src="https://img.shields.io/badge/version-v6.7.x-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-Apache%202.0-green.svg" alt="License">
@@ -7,6 +9,7 @@
   <img src="https://img.shields.io/badge/platform-Windows7%20%7C%2010%20%7C%2011-lightgrey.svg" alt="Platform">
 </p>
 
+选择本文档的语言/Language：[简体中文](readme.md)/[English](readme_en.md)
 
 > [!WARNING]
 > 本项目几乎是VibeCoding的，因此低质量代码可能无处不在。
