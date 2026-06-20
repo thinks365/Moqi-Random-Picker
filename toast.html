@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toast Overlay</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        html, body {
+            width: 100%; height: 100%;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Segoe UI Variable', 'Microsoft YaHei', -apple-system, sans-serif;
+        }
+        body {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 0;
+        }
+
+        /* 品牌标识 */
+        #toast-brand {
+            position: fixed;
+            top: 8px; right: 16px;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 0.8px;
+            color: rgba(255,255,255,0.55);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* 通知堆叠容器 */
+        #toast-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 14px;
+            width: 100%;
+            max-height: 100vh;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        #toast-stack::-webkit-scrollbar { display: none; }
+
+        /* 单条通知卡片 — Mica 泡沫风格 */
+        .toast-bubble {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            /* 毛玻璃核心 */
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border: 1px solid rgba(255,255,255,0.65);
+            box-shadow:
+                0 4px 24px rgba(0,0,0,0.08),
+                0 1px 3px rgba(0,0,0,0.04),
+                inset 0 1px 0 rgba(255,255,255,0.6);
+            /* 左侧类型色条 */
+            pointer-events: auto;
+            animation: bubbleIn 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .toast-bubble:hover {
+            box-shadow:
+                0 6px 30px rgba(0,0,0,0.12),
+                0 2px 6px rgba(0,0,0,0.06),
+                inset 0 1px 0 rgba(255,255,255,0.6);
+            transform: translateX(-2px);
+        }
+        .toast-bubble.dismissing {
+            animation: bubbleOut 0.2s ease forwards;
+            pointer-events: none;
+        }
+
+        @keyframes bubbleIn {
+            from { opacity: 0; transform: translateX(60px) scale(0.92); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes bubbleOut {
+            from { opacity: 1; transform: translateX(0) scale(1); }
+            to   { opacity: 0; transform: translateX(80px) scale(0.88); }
+        }
+
+
+        .toast-icon {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+            margin-top: 1px;
+            /* 图标圆形背景 — 半透明色底 */
+            background: rgba(255,255,255,0.5);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .toast-bubble.success .toast-icon { color: #4CAF50; background: rgba(76,175,80,0.1); }
+        .toast-bubble.error   .toast-icon { color: #FF5252; background: rgba(255,82,82,0.1); }
+        .toast-bubble.warning .toast-icon { color: #FFA726; background: rgba(255,167,38,0.1); }
+        .toast-bubble.info    .toast-icon { color: #2196F3; background: rgba(33,150,243,0.1); }
+
+        .toast-body { flex: 1; min-width: 0; }
+        .toast-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 3px;
+            letter-spacing: 0.2px;
+        }
+        .toast-source {
+            font-weight: 500;
+            color: rgba(0,0,0,0.3);
+            margin-right: 2px;
+        }
+        .toast-msg {
+            font-size: 12px;
+            color: #5a5a5a;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+        .toast-time {
+            font-size: 10px;
+            color: rgba(0,0,0,0.3);
+            margin-top: 5px;
+            letter-spacing: 0.3px;
+        }
+
+        .toast-close {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0,0,0,0.04);
+            color: rgba(0,0,0,0.3);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 24px;
+            text-align: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: all 0.2s;
+        }
+        .toast-close:hover {
+            background: rgba(0,0,0,0.1);
+            color: rgba(0,0,0,0.6);
+        }
+
+        /* 暗色模式适配 */
+        @media (prefers-color-scheme: dark) {
+            .toast-bubble {
+                background: rgba(44, 44, 48, 0.88);
+                backdrop-filter: blur(30px) saturate(180%);
+                -webkit-backdrop-filter: blur(30px) saturate(180%);
+                border-color: rgba(255,255,255,0.12);
+                box-shadow:
+                    0 4px 24px rgba(0,0,0,0.25),
+                    0 1px 3px rgba(0,0,0,0.15),
+                    inset 0 1px 0 rgba(255,255,255,0.08);
+            }
+            .toast-bubble:hover {
+                box-shadow:
+                    0 6px 30px rgba(0,0,0,0.35),
+                    0 2px 6px rgba(0,0,0,0.2),
+                    inset 0 1px 0 rgba(255,255,255,0.08);
+            }
+            .toast-icon {
+                background: rgba(255,255,255,0.08);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            }
+            .toast-title { color: #f0f0f0; }
+            .toast-source { color: rgba(255,255,255,0.3); }
+            .toast-msg   { color: #b0b0b0; }
+            .toast-time  { color: rgba(255,255,255,0.25); }
+            .toast-close {
+                background: rgba(255,255,255,0.06);
+                color: rgba(255,255,255,0.3);
+            }
+            .toast-close:hover {
+                background: rgba(255,255,255,0.15);
+                color: rgba(255,255,255,0.6);
+            }
+            #toast-brand { color: rgba(255,255,255,0.35); text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-brand">墨启随机点名</div>
+    <div id="toast-stack"></div>
+    <script src="./js/i18n.js"></script>
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // Initialize i18n
+        if (typeof initLanguage === 'function') {
+            initLanguage();
+            var brand = document.getElementById('toast-brand');
+            if (brand && typeof t === 'function') brand.textContent = t('墨启随机点名');
+        }
+
+        const stack = document.getElementById('toast-stack');
+        const icons = {
+            success: 'fa-check-circle',
+            error:   'fa-times-circle',
+            info:    'fa-info-circle',
+            warning: 'fa-exclamation-triangle'
+        };
+
+        ipcRenderer.on('show-toast', (_, { type, title, message, duration }) => {
+            const bubble = document.createElement('div');
+            bubble.className = 'toast-bubble ' + type;
+            const now = new Date().toLocaleString();
+            bubble.innerHTML =
+                '<i class="fas ' + (icons[type] || 'fa-info-circle') + ' toast-icon"></i>' +
+                '<div class="toast-body">' +
+                    '<div class="toast-title"><span class="toast-source">[' + (typeof t === 'function' ? t('墨启随机点名') : '墨启随机点名') + ']</span> ' + title + '</div>' +
+                    '<div class="toast-msg">' + message + '</div>' +
+                    '<div class="toast-time">' + now + '</div>' +
+                '</div>' +
+                '<button class="toast-close">&times;</button>';
+
+            bubble.querySelector('.toast-close').addEventListener('click', () => dismiss(bubble));
+            stack.appendChild(bubble);
+
+            const timer = setTimeout(() => dismiss(bubble), duration || 3500);
+
+            function dismiss(el) {
+                if (el._dismissed) return;
+                el._dismissed = true;
+                clearTimeout(timer);
+                el.classList.add('dismissing');
+                el.addEventListener('animationend', () => {
+                    el.remove();
+                    ipcRenderer.send('toast-count-changed', stack.children.length);
+                }, { once: true });
+            }
+
+            requestAnimationFrame(() => {
+                const h = stack.scrollHeight + 24;
+                ipcRenderer.send('toast-size-changed', { height: h });
+            });
+        });
+
+        ipcRenderer.on('clear-toasts', () => {
+            stack.querySelectorAll('.toast-bubble').forEach(el => {
+                el.classList.add('dismissing');
+                el.addEventListener('animationend', () => el.remove(), { once: true });
+            });
+        });
+    </script>
+</body>
+</html>

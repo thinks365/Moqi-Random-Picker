@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>悬浮窗</title>
+    <style>
+        :root {
+            /* 基础色系 */
+            --primary-color: #0067c0;
+            --text-color: #1a1a1a;
+            --border-radius: 10px;
+            /* 半透明底色与 1px 灰色边框 */
+            --glass-bg: rgba(250, 250, 250, 0.88); 
+            --glass-border: rgba(180, 180, 180, 0.6);
+            --success-color: #107c10;
+            --warning-color: #f4c163;
+            /* 动态样式变量 */
+            --float-btn-bg-color: var(--primary-color);
+            --float-btn-text-color: #ffffff;
+            --float-name-color: var(--text-color);
+            --float-name-shadow: none;
+            --float-name-highlight-color: var(--primary-color);
+            --float-btn-bg-opacity: 0.95;
+            --float-btn-text-opacity: 1;
+            --float-name-text-opacity: 1;
+        }
+        /* 深色模式自动适配 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --glass-bg: rgba(36, 36, 36, 0.88);
+                --glass-border: rgba(100, 100, 100, 0.6);
+                --text-color: rgba(255, 255, 255, 0.95);
+                --success-color: #6ccb5f;
+                --warning-color: #fce100;
+            }
+        }
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none !important;
+            cursor: default !important;
+        }
+        body {
+            /* 完美贴合 160x80 窗口，不留任何多余缝隙 */
+            width: 100vw;
+            height: 100vh;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: "Segoe UI Variable", "Microsoft YaHei", -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Mica 模式：#float-container 直接承载壁纸，完美利用其原有的 border-radius 和 overflow 裁剪 */
+        body.mica-mode #float-container {
+            background-color: transparent !important;
+            background-repeat: no-repeat !important;
+            will-change: background-position;
+            /* 彻底移除边框（而非仅透明），确保毛玻璃遮罩覆盖到边缘不留缝隙 */
+            border: none !important;
+        }
+        /* Mica 模式：隐藏原有背景容器，防止遮挡壁纸 */
+        body.mica-mode #background-container {
+            display: none !important;
+        }
+
+        /* 核心悬浮窗容器 */
+        #float-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-radius: var(--border-radius);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            box-shadow: none;
+            -webkit-app-region: drag;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        /* 背景图片层 */
+        #background-container {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            border-radius: inherit;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        #background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 1;
+            display: none;
+        }
+        /* 图像变暗遮罩层 */
+        #background-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        @media (prefers-color-scheme: dark) {
+            #background-container::after {
+                background: rgba(0, 0, 0, 0.3);
+            }
+        }
+        /* Mica 毛玻璃遮罩层 */
+        .mica-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            border-radius: inherit;
+            backdrop-filter: blur(15px);
+            background-color: rgba(255, 255, 255, 0.4);
+            -webkit-app-region: drag;
+            pointer-events: none;
+            display: none;
+        }
+        @media (prefers-color-scheme: dark) {
+            .mica-overlay {
+                background-color: rgba(0, 0, 0, 0.4);
+            }
+        }
+        /* 状态指示灯*/
+        .status-indicator {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            transition: background-color 0.3s ease;
+        }
+        .status-dot.active {
+            animation: modern-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes modern-pulse {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
+        /* 姓名显示区域 */
+        #content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 12px 0 12px;
+            z-index: 5;
+            pointer-events: none;
+        }
+        #float-name {
+            font-size: 19px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: rgba(var(--float-name-color-rgb), var(--float-name-text-opacity));
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: var(--float-name-shadow);
+            transition: all 0.3s ease;
+            will-change: transform, opacity;
+        }
+
+        /* 按钮容器 - 居中，减小间隙 */
+        .button-container {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 3px; /* 减小两个按钮的间隙 */
+            padding: 0 10px 8px 10px;
+            width: 100%;
+            height: 32px;
+            -webkit-app-region: no-drag;
+            z-index: 10;
+        }
+
+        /* 按钮通用基础样式 */
+        .btn-base {
+            background: rgba(var(--float-btn-bg-color-rgb), var(--float-btn-bg-opacity));
+            color: rgba(var(--float-btn-text-color-rgb), var(--float-btn-text-opacity));
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: center;
+        }
+
+        /* 快速点名按钮 - 调宽且禁止换行 */
+        .quick-roll-btn {
+            width: 98px; /* 加宽以容纳文字和图标 */
+            padding: 0 8px;
+            font-size: 12px;
+            font-weight: 500;
+            gap: 4px;
+            white-space: nowrap; /* 强制单行，绝不换行 */
+        }
+        /* 菜单按钮 */
+        .menu-btn {
+            width: 30px;
+            min-width: 30px;
+        }
+        /* 交互特效：只放大，不变色 */
+        .btn-base:hover {
+            transform: scale(1.03);
+            z-index: 2;
+        }
+        .btn-base:active {
+            transform: scale(1.06);
+        }
+        /* 图标样式 */
+        .button-icon {
+            fill: currentColor;
+        }
+        .quick-roll-btn .button-icon {/* 点名图标稍微小一点，保持整体平衡感 */
+            width: 14px;
+            height: 14px;
+        }
+        .menu-btn .button-icon {
+            width: 14px; /* 齿轮图标稍稍调大一点点更好看 */
+            height: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="float-container">
+        <div id="background-container">
+            <img id="background-image" alt="悬浮窗背景">
+        </div>
+        <!-- Mica 毛玻璃遮罩层（仅 Mica 启用时显示） -->
+        <div class="mica-overlay"></div>
+
+        <div class="status-indicator">
+            <div class="status-dot" id="status-led"></div>
+        </div>
+
+        <div id="content-wrapper">
+            <div id="float-name">准备就绪</div>
+        </div>
+        
+        <div class="button-container">
+            <button id="quick-roll-btn" class="btn-base quick-roll-btn" title="快速点名">
+                <svg class="button-icon" viewBox="0 0 24 24">
+                    <path d="M13.5 2.5c0-.828.672-1.5 1.5-1.5s1.5.672 1.5 1.5v5.078l3.891-3.184a1.5 1.5 0 012.328 1.25v9.912a1.5 1.5 0 01-2.328 1.25L16.5 13.422v5.078c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5V2.5zM8 4a4 4 0 00-4 4v8a4 4 0 008 0V8a4 4 0 00-4-4z"/>
+                </svg>
+                快速点名
+            </button>
+            <button id="menu-btn" class="btn-base menu-btn" title="设置">
+                <svg class="button-icon" viewBox="0 0 24 24">
+                    <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script src="./js/i18n.js"></script>
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        // Initialize i18n
+        if (typeof initLanguage === 'function') {
+            initLanguage();
+            setTimeout(function() { if (typeof applyLanguage === 'function') applyLanguage(); }, 0);
+        }
+
+        // Listen for language changes from main window
+        ipcRenderer.on('update-float-language', function(_, lang) {
+            if (typeof setLanguage === 'function') {
+                setLanguage(lang);
+            }
+        });
+
+        const floatName = document.getElementById('float-name');
+        const statusLed = document.getElementById('status-led');
+        const backgroundImage = document.getElementById('background-image');
+        const quickRollBtn = document.getElementById('quick-roll-btn');
+        const menuBtn = document.getElementById('menu-btn');
+        var currentRawName = ''; // Track raw name for re-display on style change
+
+        // ==== IPC通讯与原有逻辑保持完全一致 ====
+        
+        function loadBackgroundImage() {
+            const savedBg = localStorage.getItem('floatBackground');
+            if (savedBg) {
+                backgroundImage.src = savedBg;
+                backgroundImage.style.display = 'block';
+            } else {
+                backgroundImage.style.display = 'none';
+            }
+        }
+
+        function loadFloatStyles() {
+            const savedStyles = localStorage.getItem('floatStyles');
+            if (savedStyles) {
+                try {
+                    const styles = JSON.parse(savedStyles);
+                    applyFloatStyleChanges(styles);
+                } catch(e) {
+                    console.error('加载样式失败', e);
+                }
+            }
+        }
+
+        // Text display settings (synced from main window)
+        var scaleTextToFit = false;
+        var wrapEnglishNames = false;
+
+        function applyFloatStyleChanges(styles) {
+            const rootStyle = document.documentElement.style;
+
+            if (styles.btnBgColor) rootStyle.setProperty('--float-btn-bg-color', styles.btnBgColor);
+            if (styles.btnTextColor) rootStyle.setProperty('--float-btn-text-color', styles.btnTextColor);
+            if (styles.nameColor) rootStyle.setProperty('--float-name-color', styles.nameColor);
+
+            rootStyle.setProperty('--float-name-highlight-color', styles.nameHighlightColor || styles.btnBgColor || 'var(--primary-color)');
+
+            const btnBgRgb = hexToRgb(styles.btnBgColor);
+            const btnTextRgb = hexToRgb(styles.btnTextColor);
+            const nameColorRgb = hexToRgb(styles.nameColor);
+
+            if (btnBgRgb) rootStyle.setProperty('--float-btn-bg-color-rgb', `${btnBgRgb.r}, ${btnBgRgb.g}, ${btnBgRgb.b}`);
+            if (btnTextRgb) rootStyle.setProperty('--float-btn-text-color-rgb', `${btnTextRgb.r}, ${btnTextRgb.g}, ${btnTextRgb.b}`);
+            if (nameColorRgb) rootStyle.setProperty('--float-name-color-rgb', `${nameColorRgb.r}, ${nameColorRgb.g}, ${nameColorRgb.b}`);
+
+            if (styles.btnBgOpacity !== undefined) rootStyle.setProperty('--float-btn-bg-opacity', (styles.btnBgOpacity / 100).toString());
+            if (styles.btnTextOpacity !== undefined) rootStyle.setProperty('--float-btn-text-opacity', (styles.btnTextOpacity / 100).toString());
+            if (styles.nameTextOpacity !== undefined) rootStyle.setProperty('--float-name-text-opacity', (styles.nameTextOpacity / 100).toString());
+
+            if (styles.nameShadow) {
+                const shadowColor = styles.nameShadowColor || 'rgba(0,0,0,0.5)';
+                rootStyle.setProperty('--float-name-shadow', `0 1px 3px ${shadowColor}`);
+            } else {
+                rootStyle.setProperty('--float-name-shadow', 'none');
+            }
+
+            // Text display settings
+            if (styles.scaleTextToFit !== undefined) scaleTextToFit = styles.scaleTextToFit;
+            if (styles.wrapEnglishNames !== undefined) wrapEnglishNames = styles.wrapEnglishNames;
+
+            localStorage.setItem('floatStyles', JSON.stringify(styles));
+        }
+
+        // --- Text Display Helpers ---
+
+        // Default font size for float name
+        var DEFAULT_NAME_FONT_SIZE = 19;
+        var MIN_NAME_FONT_SIZE = 9;
+
+        function scaleNameToFit() {
+            var contentWrapper = document.getElementById('content-wrapper');
+            var maxWidth = contentWrapper.clientWidth - 20;
+            var fontSize = DEFAULT_NAME_FONT_SIZE;
+            floatName.style.fontSize = fontSize + 'px';
+            // Step down font size until text fits within wrapper width
+            while (fontSize > MIN_NAME_FONT_SIZE && floatName.scrollWidth > maxWidth) {
+                fontSize -= 1;
+                floatName.style.fontSize = fontSize + 'px';
+            }
+        }
+
+        function applyNameDisplay(name) {
+            currentRawName = name;
+            // Reset to defaults
+            floatName.style.fontSize = '';
+            floatName.style.whiteSpace = '';
+            floatName.style.wordBreak = '';
+            floatName.innerHTML = '';
+
+            // Apply English name wrapping: replace spaces with <br> for Latin-script names
+            if (wrapEnglishNames && /[a-zA-Z]/.test(name) && name.includes(' ')) {
+                floatName.style.whiteSpace = 'normal';
+                floatName.style.wordBreak = 'keep-all';
+                floatName.innerHTML = name.replace(/ /g, '<br>');
+            } else {
+                floatName.textContent = name;
+            }
+
+            // Apply text scaling if enabled
+            if (scaleTextToFit) {
+                scaleNameToFit();
+            }
+        }
+
+        loadBackgroundImage();
+        loadFloatStyles();
+
+        // ===== 伪 Mica 效果（悬浮窗专用） =====
+        var micaEnabled = false;
+        var micaRAFId = null;
+        var micaLastX = -1;
+        var micaLastY = -1;
+
+        // 获取 float-container 引用的辅助函数（缓存 DOM 查询）
+        var _floatContainer = null;
+        function getFloatContainer() {
+            if (!_floatContainer) _floatContainer = document.getElementById('float-container');
+            return _floatContainer;
+        }
+
+        function syncBackgroundPosition() {
+            var currentX = window.screenX;
+            var currentY = window.screenY;
+            if (currentX !== micaLastX || currentY !== micaLastY) {
+                var fc = getFloatContainer();
+                if (fc) fc.style.setProperty('background-position', (-currentX) + 'px ' + (-currentY) + 'px', 'important');
+                micaLastX = currentX;
+                micaLastY = currentY;
+            }
+            micaRAFId = requestAnimationFrame(syncBackgroundPosition);
+        }
+
+        function enableMica(wallpaperDataUrl, screenWidth, screenHeight) {
+            if (!wallpaperDataUrl) return;
+            // 壁纸注入到 #float-container，利用其原有的 border-radius + overflow 完美裁剪圆角
+            var fc = getFloatContainer();
+            fc.style.setProperty('background-image', 'url("' + wallpaperDataUrl + '")', 'important');
+            fc.style.setProperty('background-size', screenWidth + 'px ' + screenHeight + 'px', 'important');
+            fc.style.setProperty('background-position', '0px 0px', 'important');
+            document.body.classList.add('mica-mode');
+            var overlay = document.querySelector('.mica-overlay');
+            if (overlay) overlay.style.display = 'block';
+            micaEnabled = true;
+            // 启动位置同步循环
+            if (micaRAFId) cancelAnimationFrame(micaRAFId);
+            micaLastX = -1;
+            micaLastY = -1;
+            syncBackgroundPosition();
+        }
+
+        function disableMica() {
+            if (micaRAFId) {
+                cancelAnimationFrame(micaRAFId);
+                micaRAFId = null;
+            }
+            var fc = getFloatContainer();
+            fc.style.removeProperty('background-image');
+            fc.style.removeProperty('background-size');
+            fc.style.removeProperty('background-position');
+            document.body.classList.remove('mica-mode');
+            var overlay = document.querySelector('.mica-overlay');
+            if (overlay) overlay.style.display = 'none';
+            micaEnabled = false;
+            // 清除持久化状态，避免下次加载时误恢复
+            localStorage.removeItem('floatMicaEnabled');
+            localStorage.removeItem('floatMicaScreenWidth');
+            localStorage.removeItem('floatMicaScreenHeight');
+        }
+
+        // 监听来自主窗口的 Mica 设置更新
+        ipcRenderer.on('update-float-mica', function(_, settings) {
+            if (settings.enabled) {
+                enableMica(settings.wallpaperPath, settings.screenWidth, settings.screenHeight);
+                localStorage.setItem('floatMicaEnabled', 'true');
+                localStorage.setItem('floatMicaScreenWidth', settings.screenWidth);
+                localStorage.setItem('floatMicaScreenHeight', settings.screenHeight);
+            } else {
+                disableMica();
+            }
+        });
+
+        // 页面加载时恢复 Mica 状态（重新向主进程请求壁纸数据，避免在 localStorage 存大体积 Base64）
+        (async function restoreMicaState() {
+            var savedEnabled = localStorage.getItem('floatMicaEnabled');
+            if (savedEnabled === 'true') {
+                var savedWidth = parseInt(localStorage.getItem('floatMicaScreenWidth'));
+                var savedHeight = parseInt(localStorage.getItem('floatMicaScreenHeight'));
+                if (savedWidth && savedHeight) {
+                    try {
+                        var wallpaperData = await ipcRenderer.invoke('get-wallpaper-path');
+                        if (wallpaperData) {
+                            enableMica(wallpaperData, savedWidth, savedHeight);
+                        }
+                    } catch (e) {
+                        console.error('恢复 Mica 状态失败:', e);
+                    }
+                }
+            }
+        })();
+
+        ipcRenderer.on('update-float-background', (_, imageData) => {
+            if (imageData) {
+                localStorage.setItem('floatBackground', imageData);
+                backgroundImage.src = imageData;
+                backgroundImage.style.display = 'block';
+            } else {
+                localStorage.removeItem('floatBackground');
+                backgroundImage.style.display = 'none';
+            }
+        });
+
+        ipcRenderer.on('update-float-styles', (_, styles) => {
+            applyFloatStyleChanges(styles);
+            // Re-apply current name display with new settings
+            if (currentRawName) {
+                applyNameDisplay(currentRawName);
+            }
+        });
+
+        ipcRenderer.on('update-name', (_, name) => {
+            if (name === t('点名中')) {
+                statusLed.classList.add('active');
+                statusLed.style.backgroundColor = 'var(--warning-color)';
+            } else {
+                statusLed.classList.remove('active');
+                statusLed.style.backgroundColor = 'var(--success-color)';
+                setTimeout(() => {
+                    statusLed.style.backgroundColor = '#999';
+                }, 1500);
+            }
+            applyNameDisplay(name);
+            floatName.style.color = '';
+        });
+
+        let animationNames = [];
+        let animationInterval = null;
+        
+        ipcRenderer.on('start-float-animation', (_, { names, speed }) => {
+            animationNames = names;
+            animateNames(speed);
+        });
+        
+        ipcRenderer.on('stop-float-animation', (_, name) => {
+            stopAnimation(name);
+        });
+        
+        function animateNames(speed) {
+            if (animationInterval) clearInterval(animationInterval);
+            
+            floatName.style.opacity = '0.6';
+            floatName.style.transform = 'scale(0.95)';
+            
+            statusLed.classList.add('active');
+            statusLed.style.backgroundColor = 'var(--warning-color)';
+            
+            animationInterval = setInterval(() => {
+                if(animationNames.length === 0) return;
+                const index = Math.floor(Math.random() * animationNames.length);
+                applyNameDisplay(animationNames[index]);
+                
+                floatName.style.opacity = '1';
+                floatName.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    floatName.style.transform = 'scale(0.95)';
+                }, 50);
+            }, speed);
+        }
+        
+        function stopAnimation(finalName) {
+            if (animationInterval) clearInterval(animationInterval);
+
+            applyNameDisplay(finalName);
+            floatName.style.color = 'var(--float-name-highlight-color)';
+            floatName.style.transform = 'scale(1.1)';
+            floatName.style.opacity = '1';
+            
+            setTimeout(() => {
+                floatName.style.transform = 'scale(1)';
+                floatName.style.color = 'rgba(var(--float-name-color-rgb), var(--float-name-text-opacity))';
+            }, 500);
+            
+            statusLed.classList.remove('active');
+            statusLed.style.backgroundColor = 'var(--success-color)';
+            setTimeout(() => {
+                statusLed.style.backgroundColor = '#999';
+            }, 1500);
+        }
+
+        function hexToRgb(hex) {
+            if (!hex) return null;
+            hex = hex.replace(/^#/, '');
+            if (hex.length === 3) {
+                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+            }
+            const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            if (!result) return null;
+            return {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            };
+        }
+
+        quickRollBtn.addEventListener('click', () => {
+            ipcRenderer.send('quick-roll');
+        });
+        
+        menuBtn.addEventListener('click', () => {
+            ipcRenderer.send('show-float-menu');
+        });
+    </script>
+</body>
+</html>
