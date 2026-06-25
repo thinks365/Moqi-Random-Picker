@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO 标签 -->
+    <title>墨启随机点名软件 - 下一代智能课堂点名方案</title>
+    <meta name="description" content="墨启随机点名是一款基于Electron打造的免费智能课堂点名软件。支持个人/小组双模式、悬浮窗便捷点名、全局快捷键、多班级名单管理及TTS语音播报，是教师课堂互动与抽选的必备工具。">
+    <meta name="keywords" content="随机点名, 点名软件, 课堂互动, 墨启点名, 悬浮窗点名, 教师工具, 抽签软件, 走班制点名, 电脑点名系统">
+    <meta name="author" content="日有所思 thinks365">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://rrc.thinks365.com/">
+
+    <!-- Open Graph 社交分享标签-->
+    <meta property="og:title" content="墨启随机点名软件 - 智能课堂互动工具">
+    <meta property="og:description" content="专为教师打造的智能点名工具，支持悬浮窗、多名单切换与语音播报，让课堂互动更轻松。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://rrc.thinks365.com/">
+    <meta property="og:image" content="https://rrc.thinks365.com/icon.png">
+    <meta property="og:site_name" content="墨启随机点名">
+
+    <!-- 结构化数据 JSON-LD  -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "墨启随机点名",
+        "operatingSystem": "Windows",
+        "applicationCategory": "EducationalApplication",
+        "description": "基于Electron打造的下一代智能课堂点名软件，支持悬浮窗、多名单管理及TTS语音播报。",
+        "publisher": {
+            "@type": "Organization",
+            "name": "日有所思 thinks365"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "CNY"
+        }
+    }
+    </script>
+    
+    <link rel="icon" href="logo.png">
+    <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "vhlpemr60a");
+</script>
+    <!-- 引入 Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 Tailwind CSS (现代样式框架) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts (Roboto 用于匹配软件字体) -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 配置 Tailwind 主题色 (匹配 v6.0.1 源码 CSS 变量) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#409eff', // Element UI Blue
+                        'primary-hover': '#66b1ff',
+                        success: '#67c23a', // Element UI Green
+                        warning: '#e6a23c', // Element UI Yellow/Orange
+                        danger: '#f56c6c',  // Element UI Red
+                        surface: '#ffffff',
+                        background: '#f0f2f5', // App bg color
+                        text: '#333333',
+                        'text-secondary': '#666666',
+                    },
+                    fontFamily: {
+                        sans: ['"Microsoft YaHei"', '"Roboto"', '"Noto Sans SC"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'app-card': '0 4px 12px rgba(0,0,0,0.08)', // --shadow
+                        'app-float': '0 4px 12px rgba(0,0,0,0.2)',
+                        'glow': '0 0 20px rgba(64, 158, 255, 0.4)',
+                    },
+                    animation: {
+                        'bounce-slight': 'bounce-slight 2s infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        'bounce-slight': {
+                            '0%, 100%': { transform: 'translateY(-5%)' },
+                            '50%': { transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 自定义样式补充 */
+        body {
+            background-color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* 动态背景光斑 */
+        .bg-mesh {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            z-index: -1;
+            background: radial-gradient(at 0% 0%, hsla(210,100%,96%,1) 0, transparent 50%), 
+                        radial-gradient(at 50% 0%, hsla(200,100%,94%,1) 0, transparent 50%), 
+                        radial-gradient(at 100% 0%, hsla(220,100%,96%,1) 0, transparent 50%);
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* 元素淡入动画类 */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .fade-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 改进的加载动画 (New Loader) */
+        .loader-wrapper {
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .loading-cube-grid {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            margin-bottom: 1rem;
+        }
+        .loading-cube {
+            background-color: #409eff;
+            animation: cubeGridScaleDelay 1.3s infinite ease-in-out;
+        }
+        .loading-cube:nth-child(1) { animation-delay: 0.2s; }
+        .loading-cube:nth-child(2) { animation-delay: 0.3s; }
+        .loading-cube:nth-child(3) { animation-delay: 0.3s; }
+        .loading-cube:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes cubeGridScaleDelay {
+            0%, 70%, 100% { transform: scale3D(1, 1, 1); }
+            35% { transform: scale3D(0, 0, 1); }
+        }
+    </style>
+</head>
+<body class="text-text antialiased selection:bg-primary selection:text-white">
+
+    <!-- 改进的加载屏 -->
+    <div class="loader-wrapper" id="loader">
+        <div class="loading-cube-grid">
+            <div class="loading-cube rounded-sm"></div>
+            <div class="loading-cube rounded-sm bg-primary/70"></div>
+            <div class="loading-cube rounded-sm bg-primary/70"></div>
+            <div class="loading-cube rounded-sm"></div>
+        </div>
+        <p class="text-text-secondary text-sm font-medium tracking-widest uppercase">正在加载</p>
+    </div>
+
+    <!-- 背景光效 -->
+    <div class="bg-mesh"></div>
+
+    <!-- 导航栏 -->
+    <nav class="fixed w-full z-50 top-0 transition-all duration-300" id="navbar">
+        <div class="absolute inset-0 bg-white/70 backdrop-blur-md border-b border-white/20 shadow-sm" id="nav-bg"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <img src="icon.png" alt="墨启随机点名官方Logo" class="w-10 h-10 rounded-lg shadow-md object-contain bg-white p-1">
+                    <span class="font-bold text-xl tracking-tight text-text">墨启随机点名</span>
+                </div>
+
+                <!-- Desktop Menu 
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="https://rrc.thinks365.com/r3/index.html" class="text-text-secondary hover:text-primary font-medium transition-colors">在线体验</a>-->
+                    <a href="#features" class="text-text-secondary hover:text-primary font-medium transition-colors">软件特性</a>
+                    <!--<a href="help.html" class="text-text-secondary hover:text-primary font-medium transition-colors">帮助中心</a>-->
+                    <a href="#preview" class="text-text-secondary hover:text-primary font-medium transition-colors">界面预览</a>
+                    <a href="#changelog" class="text-text-secondary hover:text-primary font-medium transition-colors">更新日志</a>
+                    
+                    <!-- Language Selector Dropdown 
+                    <div class="relative group">
+                        <button class="text-text-secondary hover:text-primary font-medium transition-colors flex items-center gap-1.5 py-2 cursor-pointer">
+                            <i class="fas fa-language text-lg"></i>
+                            <span>语言</span>
+                            <i class="fas fa-chevron-down text-[10px] ml-0.5 opacity-70 group-hover:rotate-180 transition-transform duration-300"></i>
+                        </button>-->
+                        <!-- Dropdown Panel 
+                        <div class="absolute right-0 top-full pt-2 w-32 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 transform origin-top translate-y-2 group-hover:translate-y-0">
+                            <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1">
+                                <a href="index.html" class="block px-4 py-2.5 text-sm text-primary bg-blue-50/50 font-medium hover:bg-blue-50 transition-colors">简体中文</a>
+                                <a href="index_zh_TW.html" class="block px-4 py-2.5 text-sm text-text hover:bg-gray-50 hover:text-primary transition-colors">繁体中文</a>
+                                <a href="index_en.html" class="block px-4 py-2.5 text-sm text-text hover:bg-gray-50 hover:text-primary transition-colors">English</a>
+                            </div>
+                        </div>-->
+                    </div>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="p-2 rounded-lg text-text-secondary hover:bg-gray-100 focus:outline-none">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Sidebar -->
+    <div id="mobile-sidebar" class="fixed inset-0 z-[60] transform translate-x-full transition-transform duration-300 md:hidden">
+        <div class="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" id="sidebar-overlay"></div>
+        <div class="absolute right-0 top-0 h-full w-72 bg-white shadow-2xl p-6 flex flex-col">
+            <div class="flex justify-end mb-8">
+                <button id="close-sidebar" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="flex flex-col space-y-6">
+                <a href="#features" class="text-lg font-medium text-text hover:text-primary sidebar-link">软件特性</a>
+                <a href="#preview" class="text-lg font-medium text-text hover:text-primary sidebar-link">界面预览</a>
+                <!--<a href="#changelog" class="text-lg font-medium text-text hover:text-primary sidebar-link">更新日志</a>-->
+                <a href="/help.html" class="text-lg font-medium text-text hover:text-primary sidebar-link">使用帮助</a>
+                <!--<a href="https://rrc.thinks365.com/r3/index.html" class="text-lg font-medium text-primary sidebar-link">在线体验</a>-->
+                
+                <!-- Mobile Language Selector 
+                <div class="pt-6 mt-2 border-t border-gray-100">
+                    <div class="text-sm text-gray-400 mb-4 flex items-center gap-2">
+                        <i class="fas fa-language text-lg"></i> <span>语言 / Language</span>
+                    </div>
+                    <div class="flex flex-col space-y-4 pl-4">
+                        <a href="index.html" class="text-base font-medium text-primary sidebar-link">简体中文</a>
+                        <a href="index_zh_TW.html" class="text-base font-medium text-text hover:text-primary sidebar-link">繁体中文</a>
+                        <a href="index_en.html" class="text-base font-medium text-text hover:text-primary sidebar-link">English</a>
+                    </div>
+                </div>-->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section id="hero" class="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+                    <!-- Text Content -->
+                    <div class="fade-up z-10 text-center lg:text-left order-1 lg:sticky lg:top-32">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-primary text-sm font-semibold mb-6 border border-blue-100">
+                            <span class="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+                            v6.7.2 全新版本发布
+                        </div>
+                        <h1 class="text-4xl lg:text-6xl font-bold text-text leading-tight mb-6">
+                            不只点名，<br>
+                            <span class="text-primary">更是课堂互动工具</span>
+                        </h1>
+                        <p class="text-lg text-text-secondary mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                            基于 Electron 内核。支持多名单库管理、悬浮窗点名。与PPT、东方中原白板、希沃白板深度融合。
+                        </p>
+                        
+                        <!-- 按钮与链接区 -->
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center sm:items-start">
+                            <div class="flex flex-col items-center">
+                                <a href="https://download.thinks365.top/MoqiRandomPicker_Setup_6.7.2.exe" class="download-btn group relative px-8 py-4 bg-primary text-white rounded-full font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:bg-primary-hover hover:-translate-y-0.5 transition-all overflow-hidden w-full sm:w-auto text-center">
+                                    <span class="relative z-10 flex items-center gap-2 justify-center">
+                                        <i class="fas fa-download"></i> 立即下载
+                                    </span>
+                                </a>
+                                <!-- 添加的蓝奏云备用链接 -->
+                                <a href="https://oneblog.lanzout.com/iOzOA3scu45i" target="_blank" class="mt-3 text-[13px] text-text-secondary hover:text-primary transition-colors hover:underline underline-offset-2">
+                                    也可以使用蓝奏云下载
+                                </a>
+                            </div>
+                            <a href="https://github.com/Yangst233/ZhidianRollName" target="_blank" class="px-8 py-4 bg-white text-text rounded-full font-medium flex items-center justify-center gap-2 shadow-sm border border-gray-200 hover:bg-gray-50 transition-all">
+                                <i class="fab fa-github"></i> GitHub
+                            </a>
+                            <!-- 在线体验按钮 
+                            <a href="https://rrc.thinks365.com/r3/index.html" class="px-8 py-4 bg-white text-text rounded-full font-medium flex items-center justify-center gap-2 shadow-sm border border-gray-200 hover:text-primary hover:border-primary hover:bg-blue-50 transition-all">
+                                <i class="fas fa-rocket"></i> 在线体验
+                            </a>-->
+                        </div>
+
+                        <div class="mt-8 flex items-center justify-center lg:justify-start gap-6 text-sm text-text-secondary">
+                            <span class="flex items-center gap-2"><i class="fas fa-tachometer-alt text-primary"></i> 硬件加速</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-layer-group text-success"></i> 多名单管理</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-magic text-warning"></i> 深度定制</span>
+                        </div>
+                    </div>
+
+                    <!-- Visual Content (Screenshot) -->
+                    <div class="fade-up relative flex items-center justify-center order-2 lg:mt-0" id="preview">
+                        
+                        <!-- Screenshot Image -->
+                        <img src="screenshot.webp" alt="墨启随机点名软件界面截图" class="w-full h-auto rounded-lg shadow-2xl transform hover:scale-[1.01] transition-transform duration-500 relative z-10">
+                        
+                        <!-- Back Decorative Blob -->
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-gradient-to-tr from-blue-200/30 to-purple-200/30 blur-3xl rounded-full -z-10 animate-pulse-slow"></div>
+
+                        <!-- Disclaimer Text -->
+                        <div class="absolute -bottom-8 right-0 text-[10px] sm:text-xs text-text-secondary opacity-60 pointer-events-none select-none">
+                            * 界面预览仅供参考，实际效果以最新版本为准
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 数据展示板块 (新增) -->
+        <section class="relative z-20 pb-12 pt-8 lg:pb-16 lg:pt-0 -mt-8 lg:-mt-16">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl shadow-blue-900/5 border border-white/50 p-8 md:p-10 fade-up">
+                    <div class="grid grid-cols-2 gap-8 text-center divide-x divide-gray-100">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="text-4xl md:text-5xl font-black text-primary mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">50+</div>
+                            <div class="text-text-secondary font-medium text-sm md:text-base flex items-center gap-2">
+                                <i class="fas fa-code-branch text-blue-300"></i> 迭代版本
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="text-4xl md:text-5xl font-black text-primary mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">1000+</div>
+                            <div class="text-text-secondary font-medium text-sm md:text-base flex items-center gap-2">
+                                <i class="fas fa-cloud-download-alt text-blue-300"></i> 累计下载次数
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section (重构后的PDF特性展示板块) -->
+        <section id="features" class="py-24 bg-white relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16 fade-up">
+                    <h2 class="text-sm font-bold text-primary tracking-widest uppercase mb-3">Core Features</h2>
+                    <p class="text-3xl lg:text-4xl font-bold text-text mb-4">软件特性解析</p>
+                    <p class="text-text-secondary text-lg">基于全新架构底层打造，各项核心功能全面对齐您的使用场景，让点名更加得心应手。</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Feature 1: 个人模式/小组模式双模式 -->
+                    <div class="fade-up p-8 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                        <div class="w-14 h-14 bg-blue-100 text-primary rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-text mb-3">个人/小组 双模式</h3>
+                        <p class="text-text-secondary leading-relaxed">支持个人模式与小组模式，且支持主界面一键无缝切换，轻松满足不同形式的课堂互动需求。</p>
+                    </div>
+
+                    <!-- Feature 2: 悬浮窗点名 -->
+                    <div class="fade-up p-8 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group" style="transition-delay: 100ms;">
+                        <div class="w-14 h-14 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-window-restore"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-text mb-3">悬浮窗便捷点名</h3>
+                        <p class="text-text-secondary leading-relaxed">还在为频繁切换应用发愁？无需退出PPT放映页面，使用桌面悬浮窗即可一键快捷完成点名。</p>
+                    </div>
+
+                    <!-- Feature 3: 快捷键支持 -->
+                    <div class="fade-up p-8 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group" style="transition-delay: 200ms;">
+                        <div class="w-14 h-14 bg-green-100 text-success rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-keyboard"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-text mb-3">全局快捷键支持</h3>
+                        <p class="text-text-secondary leading-relaxed">无需频繁走到电脑前操作。支持设置至多5套快捷键（如 Ctrl+P 等），按一下翻页笔即可触发点名。</p>
+                    </div>
+
+                    <!-- Feature 4: 多名单管理与导入 -->
+                    <div class="fade-up p-8 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                        <div class="w-14 h-14 bg-yellow-100 text-warning rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-text mb-3">便捷的名单管理</h3>
+                        <p class="text-text-secondary leading-relaxed">支持 TXT / Excel 双模式导入名单。多套名单一并入库管理，走班制频繁切换班级再也无需麻烦。</p>
+                    </div>
+
+                    <!-- Feature 5: 语音播报与音效 -->
+                    <div class="fade-up p-8 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group" style="transition-delay: 100ms;">
+                        <div class="w-14 h-14 bg-red-100 text-danger rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-volume-up"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-text mb-3">TTS语音与音效</h3>
+                        <p class="text-text-secondary leading-relaxed">随机点名也可以妙趣横生！支持调用系统 TTS 引擎自动播报抽取结果，并可配置专属点名背景音乐。</p>
+                    </div>
+
+                    <!-- Feature 6: 开机自启 -->
+                    <div class="fade-up p-8 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group" style="transition-delay: 200ms;">
+                        <div class="w-14 h-14 bg-cyan-100 text-cyan-600 rounded-xl flex items-center justify-center text-2xl mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-text mb-3">开机自启动设置</h3>
+                        <p class="text-text-secondary leading-relaxed">告别每次上课前繁杂的手动启动步骤。设置开机自启动程序，或仅静默启动悬浮窗，开机即用。</p>
+                    </div>
+                </div>
+
+                <!-- 更多功能展示 (PDF最后彩蛋) -->
+                <div class="mt-14 text-center fade-up">
+                    <p class="text-sm font-medium text-text-secondary bg-gray-50 inline-block px-8 py-3 rounded-full border border-gray-200 shadow-sm transition-all hover:bg-white hover:shadow-md cursor-default">
+                        <i class="fas fa-sparkles text-primary mr-2 animate-pulse"></i> 还有更多功能等你体验：数据防篡改、点名显示照片持续探索中...
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Changelog Section -->
+        <section id="changelog" class="py-24 bg-gray-50">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-bold text-text mb-12 text-center fade-up">版本迭代历程</h2>
+                
+                <div class="relative border-l-2 border-gray-200 ml-4 md:ml-0 space-y-12">
+                    <!--v6.5.1-->
+                    <div class="relative pl-8 md:pl-12 fade-up">
+                        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-primary shadow-glow"></div>
+                        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 mb-2">
+                            <h3 class="text-xl font-bold text-text">v6.5.1</h3>
+                            <span class="text-sm text-text-secondary font-mono bg-white border border-gray-200 px-2 py-0.5 rounded">2026-02-19</span>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                            <div class="mb-4">
+                                <span class="text-xs font-bold text-white bg-primary px-2 py-1 rounded mr-2">NEW</span>
+                                <span class="text-text-secondary text-sm">内部版本号: 6-0219</span>
+                            </div>
+                            <ul class="space-y-3">
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-success mt-1 mr-3"></i>
+                                    <span>新增：密码保护功能。</span>
+                                </li>
+                            </ul>
+                            <ul class="space-y-3">
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-success mt-1 mr-3"></i>
+                                    <span>新增：快捷键点名功能功能。</span>
+                                </li>
+                            </ul>
+                            <ul class="space-y-3">
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-success mt-1 mr-3"></i>
+                                    <span>新增：云镜主题。</span>
+                                </li>
+                            </ul>
+                            <ul class="space-y-3">
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-tools text-success mt-1 mr-3"></i>
+                                    <span>优化：悬浮窗样式。</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- V6.1.2 (Beta) -->
+                    <div class="relative pl-8 md:pl-12 fade-up">
+                        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-gray-300"></div>
+                        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 mb-2">
+                            <h3 class="text-xl font-bold text-text">v6.1.2 (Beta)</h3>
+                            <span class="text-sm text-text-secondary font-mono bg-white border border-gray-200 px-2 py-0.5 rounded">2026-02-13</span>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                            <div class="mb-4">
+                                <span class="text-text-secondary text-sm">测试版</span>
+                            </div>
+                            <ul class="space-y-3">
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-gray-400 mt-1 mr-3"></i>
+                                    <span>新增：设置菜单密码。</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- V6.0.1 (Based on user code) -->
+                    <div class="relative pl-8 md:pl-12 fade-up">
+                        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-gray-300"></div>
+                        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 mb-2">
+                            <h3 class="text-xl font-bold text-text">v6.0.1 (Beta V4)</h3>
+                            <span class="text-sm text-text-secondary font-mono bg-white border border-gray-200 px-2 py-0.5 rounded">2025-12-19</span>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                            <div class="mb-4">
+                                <span class="text-text-secondary text-sm">内部版本号: 6-1219</span>
+                            </div>
+                            <ul class="space-y-3">
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-gray-400 mt-1 mr-3"></i>
+                                    <span>新增：多名单库管理功能，支持保存、切换和删除不同班级名单。</span>
+                                </li>
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-gray-400 mt-1 mr-3"></i>
+                                    <span>新增：硬件加速选项 (Beta)，优化低配置设备上的动画表现。</span>
+                                </li>
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-gray-400 mt-1 mr-3"></i>
+                                    <span>新增：悬浮窗样式深度定制（按钮颜色、透明度、文字阴影自定义）。</span>
+                                </li>
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-check-circle text-gray-400 mt-1 mr-3"></i>
+                                    <span>新增：批量点名逻辑，支持一次性抽取多人或多组。</span>
+                                </li>
+                                <li class="flex items-start text-text-secondary">
+                                    <i class="fas fa-tools text-gray-400 mt-1 mr-3"></i>
+                                    <span>优化：重构设置菜单，采用更方便的布局。</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- V5.1.5 -->
+                    <div class="relative pl-8 md:pl-12 fade-up">
+                        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-gray-300"></div>
+                        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 mb-2">
+                            <h3 class="text-xl font-bold text-text-secondary">v5.1.5</h3>
+                            <span class="text-sm text-gray-400 font-mono">2025-08-03</span>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 text-text-secondary opacity-80">
+                            <ul class="space-y-2">
+                                <li class="flex items-center"><i class="fas fa-dot-circle text-gray-400 w-6"></i> 优化核心随机算法。</li>
+                                <li class="flex items-center"><i class="fas fa-dot-circle text-gray-400 w-6"></i> 修复已知的问题。</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <div class="mb-8 flex justify-center items-center gap-3">
+                <img src="icon.png" alt="墨启软件底部Logo" class="w-10 h-10 opacity-90">
+                <span class="text-2xl font-bold text-primary">墨启软件</span>
+            </div>
+            <p class="text-text-secondary max-w-md mx-auto mb-8">为数字化教学提供简单、纯粹的解决方案。</p>
+            <div class="text-sm text-gray-500"><p class="text-text-secondary max-w-md mx-auto mb-7">您当前正在访问本网页位于Github Page的副本，此副本可能不是最新版本。若要获取最新版本的墨启随机点名，请前往软件官网或Github仓库。</p></div>
+            <div class="text-sm text-gray-500">
+                &copy; 2025 <a href="https://www.thinks365.com/" class="hover:text-primary transition-colors">日有所思 thinks365</a>. All rights reserved. &nbsp官网UI&nbspv3.0
+            </div>
+        </div>
+    </footer>
+
+    <!-- 下载 模态框 (Modal for Download) -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-2xl p-6 w-[90%] max-w-md transform scale-95 transition-transform duration-300">
+            <!-- Mobile Content -->
+            <div id="modal-mobile" class="hidden text-center">
+                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-primary text-2xl">
+                    <i class="fas fa-desktop"></i>
+                </div>
+                <h3 class="text-xl font-bold text-text mb-2">PC端软件提示</h3>
+                <p class="text-text-secondary mb-6 leading-relaxed">墨启随机点名是电脑版软件（Windows）。请复制下方链接到电脑浏览器下载，或在电脑上访问官网地址进行下载</p>
+                <div class="bg-gray-100 p-3 rounded-lg text-sm text-text-secondary break-all mb-4 font-mono select-all text-left" id="download-url-display"></div>
+                <div class="flex gap-3">
+                    <button id="btn-copy" class="flex-1 bg-primary hover:bg-primary-hover text-white py-2.5 rounded-lg font-medium transition-colors shadow-sm">
+                        复制下载链接
+                    </button>
+                    <button onclick="closeModal()" class="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-text py-2.5 rounded-lg font-medium transition-colors">
+                        关闭
+                    </button>
+                </div>
+            </div>
+
+            <!-- PC Loading Content (更新后的内容) -->
+            <div id="modal-pc" class="hidden text-center py-6">
+                <h3 class="text-xl font-bold text-text mb-4">🎉 感谢您的支持！</h3>
+                <div class="loading-cube-grid mx-auto mb-6">
+                    <div class="loading-cube rounded-sm"></div>
+                    <div class="loading-cube rounded-sm bg-primary/70"></div>
+                    <div class="loading-cube rounded-sm bg-primary/70"></div>
+                    <div class="loading-cube rounded-sm"></div>
+                </div>
+                <p class="text-text-secondary mb-2">下载将很快开始</p>
+                <p class="text-sm text-text-secondary">如果您没有看到下载内容，<a id="manual-download-link" href="#" class="text-primary hover:underline font-medium">请点击此处</a>。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // DOM Elements
+        const loader = document.getElementById('loader');
+        const navbar = document.getElementById('navbar');
+        const navBg = document.getElementById('nav-bg');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileSidebar = document.getElementById('mobile-sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const closeSidebarBtn = document.getElementById('close-sidebar');
+        const downloadBtns = document.querySelectorAll('.download-btn');
+        
+        // Download Modal Elements
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalContent = document.getElementById('modal-content');
+        const modalMobile = document.getElementById('modal-mobile');
+        const modalPc = document.getElementById('modal-pc');
+        
+        // 更新后的统一直链地址
+        const downloadUrl = "https://download.thinks365.top/MoqiRandomPicker_Setup_6.7.2.exe";
+        
+        // 为手动下载链接绑定地址
+        const manualDownloadLink = document.getElementById('manual-download-link');
+        if (manualDownloadLink) {
+            manualDownloadLink.href = downloadUrl;
+            manualDownloadLink.addEventListener('click', () => {
+                closeModal();
+            });
+        }
+
+        // 定义复制的完整文本内容
+        const copyFullText = `[墨启随机点名]点击链接下载墨启随机点名软件：\n${downloadUrl}`;
+
+        // 1. Initialization
+        window.addEventListener('load', () => {
+            // Hide Loader with fade
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            setTimeout(() => loader.remove(), 600);
+
+            // Scroll Reveal Observer
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+        });
+
+        // 2. Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navBg.classList.add('shadow-sm');
+                navBg.classList.remove('bg-white/70');
+                navBg.classList.add('bg-white/95');
+            } else {
+                navBg.classList.remove('shadow-sm');
+                navBg.classList.add('bg-white/70');
+                navBg.classList.remove('bg-white/95');
+            }
+        });
+
+        // 3. Mobile Sidebar Logic
+        function toggleSidebar(show) {
+            if (show) {
+                mobileSidebar.classList.remove('translate-x-full');
+                document.body.style.overflow = 'hidden';
+            } else {
+                mobileSidebar.classList.add('translate-x-full');
+                document.body.style.overflow = '';
+            }
+        }
+
+        mobileMenuBtn.addEventListener('click', () => toggleSidebar(true));
+        closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', () => toggleSidebar(false));
+        });
+
+        // 4. Download Modal Logic
+        function showModal(type) {
+            modalBackdrop.classList.remove('hidden');
+            void modalBackdrop.offsetWidth;
+            modalBackdrop.classList.remove('opacity-0');
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+
+            modalMobile.classList.add('hidden');
+            modalPc.classList.add('hidden');
+
+            if (type === 'mobile') {
+                modalMobile.classList.remove('hidden');
+                // 修改此处：显示完整的带有前缀文字的内容
+                document.getElementById('download-url-display').innerText = copyFullText;
+            } else {
+                modalPc.classList.remove('hidden');
+            }
+        }
+
+        window.closeModal = function() {
+            modalBackdrop.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modalBackdrop.classList.add('hidden');
+            }, 300);
+        };
+
+        // Copy functionality
+        document.getElementById('btn-copy').addEventListener('click', function() {
+            // 修改此处：将复制的内容设定为完整的文案
+            navigator.clipboard.writeText(copyFullText).then(() => {
+                const originalText = this.innerText;
+                this.innerText = '已复制!';
+                this.classList.remove('bg-primary', 'hover:bg-primary-hover');
+                this.classList.add('bg-success', 'hover:bg-success');
+                setTimeout(() => {
+                    this.innerText = originalText;
+                    this.classList.add('bg-primary', 'hover:bg-primary-hover');
+                    this.classList.remove('bg-success', 'hover:bg-success');
+                }, 2000);
+            }).catch(() => {
+                alert('复制失败，请长按链接手动复制');
+            });
+        });
+
+        // Bind Download Buttons
+        downloadBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                if (isMobile) {
+                    showModal('mobile');
+                } else {
+                    showModal('pc');
+                    setTimeout(() => {
+                        window.location.href = downloadUrl;
+                        // 延迟较长一段时间再关闭，以防用户需要点击手动链接
+                        setTimeout(closeModal, 8000);
+                    }, 1500);
+                }
+            });
+        });
+
+        // Close modal on backdrop click
+        modalBackdrop.addEventListener('click', (e) => {
+            if (e.target === modalBackdrop) closeModal();
+        });
+    </script>
+</body>
+</html>
